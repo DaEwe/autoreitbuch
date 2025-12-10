@@ -58,15 +58,28 @@ def main():
             days_ahead = 5 - today.weekday()
             if days_ahead <= 0: days_ahead += 7
             next_saturday = today + timedelta(days=days_ahead)
-            target_dates = [next_saturday + timedelta(weeks=i) for i in range(4)] 
+            
+            # Check next 6 weeks to catch lessons > 14 days away
+            potential_dates = [next_saturday + timedelta(weeks=i) for i in range(6)]
+            # Filter: must be more than 14 days in the future
+            target_dates = [d for d in potential_dates if (d - today).days > 14]
         
         target_found = False
         
         for target_date in target_dates:
             date_str = target_date.strftime("%d.%m.%Y")
             
+            # Calculate week offset
+            # Reitbuch likely counts week diffs.
+            # Get Monday of current week
+            start_of_current_week = today - timedelta(days=today.weekday())
+            # Get Monday of target week
+            start_of_target_week = target_date - timedelta(days=target_date.weekday())
+            
+            week_diff = (start_of_target_week - start_of_current_week).days // 7
+            
             try:
-                html = client.get_weekly_plan(date_str)
+                html = client.get_weekly_plan(week_diff)
                 lessons = parse_available_lessons(html)
                 
                 target_lessons = [l for l in lessons if "Dressur Standard" in l['title'] and "09:00" in l['time']]
@@ -78,6 +91,17 @@ def main():
                 for tl in target_lessons:
                     eid = tl['id']
                     status_msg = "Unknown"
+                    
+                    # SAFETY CHECK: Verify date context
+                    # Expected context format: 'col_YYYY-MM-DD' or just 'YYYY-MM-DD' depending on parser
+                    # target_date is a date object
+                    target_iso = target_date.strftime("%Y-%m-%d")
+                    lesson_date_ctx = tl.get('date_context', '')
+                    
+                    if target_iso not in lesson_date_ctx:
+                         status_msg = f"Date Mismatch ({lesson_date_ctx})"
+                         print(f"{date_str:<15} | {eid:<10} | {status_msg:<30}")
+                         continue
                     
                     if not tl.get('is_bookable'):
                          status_msg = "Full / Deadline passed"
@@ -103,7 +127,7 @@ def main():
                                     "selanicls": "S", "selanimal": "0", "note": "", "agb_ok": "on", "dat_ok": "on", "nutz_ok": "on"
                                   }
                                   response_evbk = client.ajax_request("ax.checkin.showcheckin", booking_params)
-                                  if "erfolgreich" in response_evbk or "gebucht" in response_evbk:
+                                  if "erfolgreich" in response_evbk or "gebucht" in response_evbk or "Sie sind Teilnehmer" in response_evbk:
                                       status_msg = "SUCCESSFULLY BOOKED"
                                       target_found = True
                                   else:
@@ -115,7 +139,7 @@ def main():
                                   target_found = True
                     
                     print(f"{date_str:<15} | {eid:<10} | {status_msg:<30}")
-                    if target_found: break
+                    # Continue searching other dates even if found
             
             except Exception as e:
                 print(f"{date_str:<15} | {'ERROR':<10} | {str(e):<30}")

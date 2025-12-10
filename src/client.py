@@ -81,14 +81,15 @@ class ReitbuchClient:
         logger.warning("Login status uncertain. Could not find explicit success/failure markers.")
         return True # Tentative success if no explicit failure
         
-    def get_weekly_plan(self, date_str=None):
+    def get_weekly_plan(self, week_offset=0):
         """
         Fetches the weekly plan page HTML. 
-        date_str: Optional date in format 'dd.mm.yyyy' to view that week.
+        week_offset: Integer representing the week offset from current week (0=current, 1=next, etc.)
         """
         params = {}
-        if date_str:
-            params['d'] = date_str
+        if week_offset != 0:
+            params['w'] = week_offset
+            params['p'] = 1 # Seems to be required or standard
             
         response = self.client.get("/weekplan.php", params=params)
         response.raise_for_status()

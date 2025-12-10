@@ -53,18 +53,21 @@ def parse_available_lessons(html_content):
             date_context = "Unknown"
             parent = link.parent
             while parent and parent.name != 'body':
-                if parent.get('id', '').startswith('col_'): # Common pattern?
-                     date_context = parent.get('id')
+                parent_id = parent.get('id', '')
+                if parent_id.startswith('collapse'): 
+                     # ID format: collapse2025-12-20
+                     # Extract everything after 'collapse'
+                     possible_date = parent_id.replace('collapse', '')
+                     # Simple validation: checks if it looks like a date (roughly)
+                     if len(possible_date) >= 10: 
+                        date_context = possible_date
+                        break
+                
+                # Also check for col_ just in case
+                if parent_id.startswith('col_'):
+                     date_context = parent_id
                      break
-                # Check for day headers
-                # Use a specific attribute if found
-                # Reitbuch often uses id="day_YYYY-MM-DD" or similar
-                
-                # Check siblings or previous elements?
-                # Let's just grab the 'id' of the parent for now to see.
-                if parent.get('id'):
-                    pass # Keep looking up
-                
+
                 parent = parent.parent
             
             # Re-attempt: Look for the specific 'day' data attribute often found in these tables
@@ -80,7 +83,7 @@ def parse_available_lessons(html_content):
                 'time': date_time,
                 'is_bookable': is_bookable,
                 'raw_onclick': onclick,
-                # 'date_context': date_context # Add this dry run
+                'date_context': date_context
             })
             
     return lessons
