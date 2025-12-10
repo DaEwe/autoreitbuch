@@ -4,15 +4,13 @@ import logging
 from client import ReitbuchClient
 from parser import parse_available_lessons
 
-# Configure logging
 logging.basicConfig(
-    level=logging.WARNING, # Default to WARNING to suppress libraries
-    format='%(message)s'   # Concise format
+    level=logging.WARNING, 
+    format='%(message)s'   
 )
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO) # Keep our logger at INFO
+logger.setLevel(logging.INFO)
 
-# Silence specific noisy loggers
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("parser").setLevel(logging.WARNING)
 
@@ -24,7 +22,6 @@ def main():
         logger.error("Error: REITBUCH_USER and REITBUCH_PASSWORD environment variables must be set.")
         sys.exit(1)
 
-    # Parse arguments
     import argparse
     parser = argparse.ArgumentParser(description='Automate Reitbuch booking.')
     parser.add_argument('--book', action='store_true', help='Actually perform the booking (default is dry-run)')
@@ -92,9 +89,7 @@ def main():
                     eid = tl['id']
                     status_msg = "Unknown"
                     
-                    # SAFETY CHECK: Verify date context
                     # Expected context format: 'col_YYYY-MM-DD' or just 'YYYY-MM-DD' depending on parser
-                    # target_date is a date object
                     target_iso = target_date.strftime("%Y-%m-%d")
                     lesson_date_ctx = tl.get('date_context', '')
                     
