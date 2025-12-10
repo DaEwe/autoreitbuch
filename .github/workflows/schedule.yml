@@ -2,13 +2,7 @@ name: Book Reitbuch Lesson
 
 on:
   schedule:
-    # Run every Monday at 06:00 UTC (Adjust as needed, user wants to book 3 weeks in advance)
-    # If the schedule opens 4 weeks in advance, running weekly is fine.
-    # User said "immer Samstags ... am besten drei Wochen im Voraus"
-    # Assuming lessons open on a schedule, running daily or on specific days is best.
-    # Let's run it daily at 07:00 UTC to match typical morning releases, or maybe just Saturdays?
-    # To be safe and since it idemptotently checks, running daily is fine.
-    - cron: '0 7 * * *'
+    - cron: '0 3 * * *'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
