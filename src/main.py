@@ -40,9 +40,11 @@ def main():
         print(f"{'Date':<15} | {'Lesson ID':<10} | {'Status':<30}")
         print("-" * 60)
         
+        from datetime import date, datetime, timedelta
+        today = date.today()
+        
         target_dates = []
         if args.date:
-            from datetime import datetime
             try:
                 dt = datetime.strptime(args.date, "%d.%m.%Y").date()
                 target_dates = [dt]
@@ -50,8 +52,6 @@ def main():
                 logger.error("Invalid date format. Please use DD.MM.YYYY")
                 sys.exit(1)
         else:
-            from datetime import date, timedelta
-            today = date.today()
             days_ahead = 5 - today.weekday()
             if days_ahead <= 0: days_ahead += 7
             next_saturday = today + timedelta(days=days_ahead)
@@ -109,28 +109,38 @@ def main():
                          
                          params = {"loginuid": loginuid, "step": "PRE", "next": "", "eventid": eid, "courseid": "0"}
                          response_pre = client.ajax_request("ax.checkin.showcheckin", params)
-                         
                          if "Buchungsfrist beendet" in response_pre or "Termin ist vergangen" in response_pre:
                               status_msg = "Deadline passed"
-                         elif "Sie sind auf der Warteliste" in response_pre or ("Teilnahme am Termin" in response_pre and "tstornieren" in response_pre):
+                         elif "Sie sind auf der Warteliste" in response_pre or ("Teilnahme am Termin" in response_pre and "stornieren" in response_pre):
                               status_msg = "Already Booked/Waitlisted"
                          else:
-                              status_msg = "AVAILABLE"
+                              # Start with default assumption
+                              is_waitlist = "Warteliste" in response_pre
+                              
+                              if is_waitlist:
+                                  next_param = "BOOK_W"
+                                  action_desc = "Waitlisting"
+                              else:
+                                  next_param = "BOOK_T"
+                                  action_desc = "Booking"
+
+                              status_msg = f"AVAILABLE ({action_desc})"
+                              
                               if args.book:
                                   booking_params = {
-                                    "loginuid": loginuid, "step": "EVBK", "next": "", "eventid": eid, "courseid": "0",
-                                    "selanicls": "S", "selanimal": "0", "note": "", "agb_ok": "on", "dat_ok": "on", "nutz_ok": "on"
+                                    "loginuid": loginuid, "step": "EVBK", "next": next_param, "eventid": eid, "courseid": "0",
+                                    "selanicls": "S", "selanimal": "S:0", "note": "", "selpayopt": "BILL"
                                   }
                                   response_evbk = client.ajax_request("ax.checkin.showcheckin", booking_params)
                                   if "erfolgreich" in response_evbk or "gebucht" in response_evbk or "Sie sind Teilnehmer" in response_evbk:
-                                      status_msg = "SUCCESSFULLY BOOKED"
+                                      status_msg = f"{action_desc} SUCCESSFUL"
                                       target_found = True
                                   else:
-                                      status_msg = "Booking Failed (See log)"
+                                      status_msg = f"{action_desc} FAILED (See log)"
                                       logger.warning(f"Booking response debug: {response_evbk[:200]}...")
                                       target_found = True
                               else:
-                                  status_msg = "AVAILABLE (Dry Run)"
+                                  status_msg = f"AVAILABLE ({action_desc}) - Dry Run"
                                   target_found = True
                     
                     print(f"{date_str:<15} | {eid:<10} | {status_msg:<30}")
