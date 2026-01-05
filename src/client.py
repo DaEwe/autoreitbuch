@@ -116,3 +116,15 @@ class ReitbuchClient:
         response = self.client.post("/ajax.php", data=payload)
         response.raise_for_status()
         return response.text
+
+    def get_event_details_ajax(self, event_id, login_uid):
+        """
+        Fetches the event details via AJAX to get the participant list.
+        Corresponds to the 'ax.event.showeventdetails' command.
+        """
+        params = {
+            "loginuid": str(login_uid),
+            "eventid": str(event_id),
+            "checkin": 0
+        }
+        return self.ajax_request("ax.event.showeventdetails", params, boxid="evt_detail")

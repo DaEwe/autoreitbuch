@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 from client import ReitbuchClient
-from parser import parse_available_lessons
+from parser import parse_available_lessons, parse_participants
 
 logging.basicConfig(
     level=logging.WARNING, 
@@ -25,6 +25,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description='Automate Reitbuch booking.')
     parser.add_argument('--book', action='store_true', help='Actually perform the booking (default is dry-run)')
+    parser.add_argument('--status', action='store_true', help='List participants and waiting list')
     parser.add_argument('--date', type=str, help='Specific date to check (DD.MM.YYYY)')
     args = parser.parse_args()
 
@@ -111,39 +112,87 @@ def main():
                          response_pre = client.ajax_request("ax.checkin.showcheckin", params)
                          if "Buchungsfrist beendet" in response_pre or "Termin ist vergangen" in response_pre:
                               status_msg = "Deadline passed"
-                         elif "Sie sind auf der Warteliste" in response_pre or ("Teilnahme am Termin" in response_pre and "stornieren" in response_pre):
-                              status_msg = "Already Booked/Waitlisted"
+                         elif "Sie sind auf der Warteliste" in response_pre:
+                              status_msg = "Already Booked/Waitlisted (Waitlist detected)"
                          else:
-                              # Start with default assumption
-                              is_waitlist = "Warteliste" in response_pre
+                              # Robust check: Parse the Next Action from the button
+                              # onClick="ShowCheckin('EVBK','BOOK_W')" or 'STORN_WT' etc.
+                              # Regex handles potential variations in quoting and whitespace
+                              # We use findall because there might be multiple ShowCheckin calls (e.g. for onChange events)
+                              all_actions = re.findall(r"ShowCheckin\s*\(\s*['\"]EVBK['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)", response_pre)
                               
-                              if is_waitlist:
-                                  next_param = "BOOK_W"
-                                  action_desc = "Waitlisting"
-                              else:
-                                  next_param = "BOOK_T"
+                              # Determine status based on available actions
+                              # Priority: Check if we can cancel (STORN) -> Booked
+                              # Then check if we can book (BOOK_T / BOOK_W)
+                              
+                              next_action = None
+                              # 1. Check for cancellation (Already booked)
+                              storn_action = next((a for a in all_actions if "STORN" in a), None)
+                              
+                              # 2. Check for booking
+                              book_t_action = "BOOK_T" if "BOOK_T" in all_actions else None
+                              book_w_action = "BOOK_W" if "BOOK_W" in all_actions else None
+                              
+                              if storn_action:
+                                  status_msg = f"Already Booked/Waitlisted ({storn_action})"
+                                  print(f"{date_str:<15} | {eid:<10} | {status_msg:<30}")
+                                  continue 
+                              elif book_t_action:
+                                  status_msg = "AVAILABLE (Booking)"
                                   action_desc = "Booking"
-
-                              status_msg = f"AVAILABLE ({action_desc})"
-                              
-                              if args.book:
-                                  booking_params = {
-                                    "loginuid": loginuid, "step": "EVBK", "next": next_param, "eventid": eid, "courseid": "0",
-                                    "selanicls": "S", "selanimal": "S:0", "note": "", "selpayopt": "BILL"
-                                  }
-                                  response_evbk = client.ajax_request("ax.checkin.showcheckin", booking_params)
-                                  if "erfolgreich" in response_evbk or "gebucht" in response_evbk or "Sie sind Teilnehmer" in response_evbk:
-                                      status_msg = f"{action_desc} SUCCESSFUL"
-                                      target_found = True
-                                  else:
-                                      status_msg = f"{action_desc} FAILED (See log)"
-                                      logger.warning(f"Booking response debug: {response_evbk[:200]}...")
-                                      target_found = True
+                                  next_param = "BOOK_T"
+                                  is_waitlist = False
+                              elif book_w_action:
+                                  status_msg = "AVAILABLE (Waitlisting)"
+                                  action_desc = "Waitlisting"
+                                  next_param = "BOOK_W"
+                                  is_waitlist = True
                               else:
-                                  status_msg = f"AVAILABLE ({action_desc}) - Dry Run"
-                                  target_found = True
+                                  # Fallback / Unknown
+                                  if "Teilnahme am Termin" in response_pre and "stornieren" in response_pre:
+                                       status_msg = "Status unclear (Manual check required)"
+                                  else:
+                                       status_msg = "Unknown Status"
+                              
+                              # Proceed with booking if available
+                              if "AVAILABLE" in status_msg:
+                                  if args.book:
+                                      booking_params = {
+                                        "loginuid": loginuid, "step": "EVBK", "next": next_param, "eventid": eid, "courseid": "0",
+                                        "selanicls": "S", "selanimal": "S:0", "note": "", "selpayopt": "BILL"
+                                      }
+                                      response_evbk = client.ajax_request("ax.checkin.showcheckin", booking_params)
+                                      if "erfolgreich" in response_evbk or "gebucht" in response_evbk or "Sie sind Teilnehmer" in response_evbk:
+                                          status_msg = f"{action_desc} SUCCESSFUL"
+                                          target_found = True
+                                      else:
+                                          status_msg = f"{action_desc} FAILED (See log)"
+                                          logger.warning(f"Booking response debug: {response_evbk[:200]}...")
+                                          target_found = True
+                                  else:
+                                      status_msg += " - Dry Run"
+                                      target_found = True
                     
                     print(f"{date_str:<15} | {eid:<10} | {status_msg:<30}")
+                    
+                    if args.status:
+                         # Fetch participants
+                         match = re.search(r'id="loginuid" name="loginuid" value="(\d+)"', html)
+                         loginuid = match.group(1) if match else "0"
+                         
+                         try:
+                             details_html = client.get_event_details_ajax(eid, loginuid)
+                             parsed = parse_participants(details_html)
+                             
+                             if parsed['participants']:
+                                 print(f"   Participants: {', '.join(parsed['participants'])}")
+                             else:
+                                 print("   Participants: (None found or parsing failed)")
+                                 
+                             if parsed['waiting_list']:
+                                 print(f"   Waiting List: {', '.join(parsed['waiting_list'])}")
+                         except Exception as e:
+                             print(f"   Error fetching status: {e}")
                     # Continue searching other dates even if found
             
             except Exception as e:
