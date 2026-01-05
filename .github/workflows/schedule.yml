@@ -2,7 +2,7 @@ name: Book Reitbuch Lesson
 
 on:
   schedule:
-    - cron: '1 * * * *'
+    - cron: '1 22,23,0 * * *'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
