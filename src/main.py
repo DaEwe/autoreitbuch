@@ -14,6 +14,21 @@ logger.setLevel(logging.INFO)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("parser").setLevel(logging.WARNING)
 
+def send_telegram_alert(message):
+    token = os.environ.get("TELEGRAM_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    
+    if not token or not chat_id:
+        logger.warning("Telegram notification skipped: Token or Chat ID missing.")
+        return
+
+    try:
+        import httpx
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        httpx.post(url, json={"chat_id": chat_id, "text": message}, timeout=10)
+    except Exception as e:
+        logger.error(f"Failed to send Telegram alert: {e}")
+
 def main():
     username = os.environ.get("REITBUCH_USER")
     password = os.environ.get("REITBUCH_PASSWORD")
@@ -30,10 +45,12 @@ def main():
     args = parser.parse_args()
 
     client = ReitbuchClient()
+    summary_messages = []
 
     try:
         if not client.login(username, password):
             logger.error("Login failed. Check credentials.")
+            send_telegram_alert("⚠️ Reitbuch Login Failed!")
             sys.exit(1)
             
         logger.info("Login successful. Checking schedule for 'Dressur Standard' (09:00 - 10:00)...")
@@ -114,6 +131,8 @@ def main():
                               status_msg = "Deadline passed"
                          elif "Sie sind auf der Warteliste" in response_pre:
                               status_msg = "Already Booked/Waitlisted (Waitlist detected)"
+                         elif "alle Teilnehmerplätze belegt" in response_pre:
+                              status_msg = "Full (No Waitlist)"
                          else:
                               # Robust check: Parse the Next Action from the button
                               # onClick="ShowCheckin('EVBK','BOOK_W')" or 'STORN_WT' etc.
@@ -165,15 +184,18 @@ def main():
                                       if "erfolgreich" in response_evbk or "gebucht" in response_evbk or "Sie sind Teilnehmer" in response_evbk:
                                           status_msg = f"{action_desc} SUCCESSFUL"
                                           target_found = True
+                                          send_telegram_alert(f"🐴 Reitbuch: {action_desc} successful for {date_str}!\nLesson ID: {eid}")
                                       else:
                                           status_msg = f"{action_desc} FAILED (See log)"
                                           logger.warning(f"Booking response debug: {response_evbk[:200]}...")
                                           target_found = True
+                                          send_telegram_alert(f"⚠️ Reitbuch: {action_desc} FAILED for {date_str}.\nCheck logs.")
                                   else:
                                       status_msg += " - Dry Run"
                                       target_found = True
                     
                     print(f"{date_str:<15} | {eid:<10} | {status_msg:<30}")
+                    summary_messages.append(f"📅 {date_str}: {status_msg}")
                     
                     if args.status:
                          # Fetch participants
@@ -197,9 +219,16 @@ def main():
             
             except Exception as e:
                 print(f"{date_str:<15} | {'ERROR':<10} | {str(e):<30}")
+                summary_messages.append(f"📅 {date_str}: ERROR {str(e)}")
+
+        # Send Summary
+        if summary_messages:
+            full_msg = "🐴 Reitbuch Report:\n" + "\n".join(summary_messages)
+            send_telegram_alert(full_msg)
 
     except Exception as e:
         logger.exception(f"An unexpected error occurred: {e}")
+        send_telegram_alert(f"⚠️ Reitbuch Crash: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 import httpx
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -13,39 +14,44 @@ class ReitbuchClient:
                 "Start-In-Task-Automation": "true" # Custom header to be nice
             },
             follow_redirects=True,
-            timeout=30.0
+            timeout=60.0,
+            verify=False
         )
 
     def login(self, username, password):
         """
         Logs into the application.
-        The login flow appears to be:
-        1. Access the main page/login page to get a session cookie (optional but good practice).
-        2. POST credentials to /weekplan.php (based on the user's curl command).
+        Flow:
+        1. GET /weekplan.php to get the login form and hidden 'loginsid'.
+        2. POST credentials to /weekplan.php with the extracted sid.
         """
         logger.info(f"Attempting login for user: {username}")
         
-        # Step 1: Browse to root to initialize session/cookies
         try:
-            # We hit index.php or similar first to get a PHPSESSID if strictly needed,
-            # but often we can just post. Let's try to just hit the root first.
-            self.client.get("/")
+            # Step 1: Get the login page to scrape the SID
+            response_get = self.client.get("/weekplan.php")
+            response_get.raise_for_status()
+            html = response_get.text
+            
+            # Extract loginsid using regex
+            # Look for <input ... id="loginsid" ... value="XYZ">
+            match = re.search(r'id="loginsid"[^>]*value="([^"]+)"', html)
+            if not match:
+                # Try alternative order of attributes
+                match = re.search(r'value="([^"]+)"[^>]*id="loginsid"', html)
+            
+            if match:
+                loginsid = match.group(1)
+                logger.debug(f"Extracted loginsid: {loginsid}")
+            else:
+                logger.warning("Could not extract loginsid from HTML. Falling back to cookie.")
+                loginsid = self.client.cookies.get("PHPSESSID", "")
+
         except httpx.RequestError as e:
             logger.error(f"Network error during initial connection: {e}")
             raise
 
         # Step 2: POST login data
-        # Based on user's curl:
-        # endpoint: weekplan.php
-        # data: loginuser=...&loginpwd=...&loginsubmit=X...
-        
-        # We need to grab the current PHPSESSID if it exists to send it in the body 
-        # as 'loginsid' if that's required by the backend, though usually cookies handle it.
-        # The curl command had 'loginsid' matching the cookie.
-        
-        cookies = self.client.cookies
-        phpsessid = cookies.get("PHPSESSID", "")
-        
         data = {
             "loginuser": username,
             "loginpwd": password,
@@ -53,7 +59,7 @@ class ReitbuchClient:
             "loginscrwidth": "1920",
             "loginscrheight": "1080",
             "loginuid": "0",
-            "loginsid": phpsessid, # Reflecting the session ID if we have it
+            "loginsid": loginsid, 
             "loginconfirm": ""
         }
         
@@ -63,8 +69,7 @@ class ReitbuchClient:
             logger.error(f"Login request failed with status code: {response.status_code}")
             return False
 
-        # Basic verification: Check if we are still on the login page or redirected/content changed.
-        # usually successful login will show the week plan or "Logout" button.
+        # Basic verification
         text_lower = response.text.lower()
         if "logout" in text_lower or "abmelden" in text_lower:
             logger.info("Login successful (detected 'logout'/'abmelden' text).")
