@@ -1,0 +1,138 @@
+# login
+curl 'https://rfv-leonberg.reitbuch.com/weekplan.php' \
+  -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
+  -H 'Accept-Language: de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7' \
+  -H 'Cache-Control: max-age=0' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -b 'PHPSESSID=bbtudueututi1t57gpcucc4h8o; view=auto' \
+  -H 'DNT: 1' \
+  -H 'Origin: https://rfv-leonberg.reitbuch.com' \
+  -H 'Referer: https://rfv-leonberg.reitbuch.com/weekplan.php' \
+  -H 'Sec-Fetch-Dest: document' \
+  -H 'Sec-Fetch-Mode: navigate' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'Sec-Fetch-User: ?1' \
+  -H 'Upgrade-Insecure-Requests: 1' \
+  -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Linux"' \
+  --data-raw 'loginuser=ellenewert&loginpwd=gurkenmaulwurf&loginsubmit=X&loginscrwidth=1920&loginscrheight=1080&loginuid=0&loginsid=bbtudueututi1t57gpcucc4h8o&loginconfirm='
+
+
+# select week 
+curl 'https://rfv-leonberg.reitbuch.com/weekplan.php?w=4&p=1' \
+  -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
+  -H 'Accept-Language: de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7' \
+  -H 'Connection: keep-alive' \
+  -b 'PHPSESSID=bbtudueututi1t57gpcucc4h8o; view=auto; did=c6233ed39e42946cbb5515f781b2cef3' \
+  -H 'DNT: 1' \
+  -H 'Referer: https://rfv-leonberg.reitbuch.com/weekplan.php' \
+  -H 'Sec-Fetch-Dest: document' \
+  -H 'Sec-Fetch-Mode: navigate' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'Sec-Fetch-User: ?1' \
+  -H 'Upgrade-Insecure-Requests: 1' \
+  -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Linux"'
+
+# details
+curl 'https://rfv-leonberg.reitbuch.com/event.php?e=26519' \
+  -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
+  -H 'Accept-Language: de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7' \
+  -H 'Connection: keep-alive' \
+  -b 'PHPSESSID=bbtudueututi1t57gpcucc4h8o; view=auto; did=c6233ed39e42946cbb5515f781b2cef3' \
+  -H 'DNT: 1' \
+  -H 'Referer: https://rfv-leonberg.reitbuch.com/weekplan.php?w=3&p=1' \
+  -H 'Sec-Fetch-Dest: document' \
+  -H 'Sec-Fetch-Mode: navigate' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'Sec-Fetch-User: ?1' \
+  -H 'Upgrade-Insecure-Requests: 1' \
+  -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Linux"'
+
+
+  # booking
+  curl 'https://rfv-leonberg.reitbuch.com/ajax.php' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-type: application/x-www-form-urlencoded' \
+  -b 'PHPSESSID=bbtudueututi1t57gpcucc4h8o; view=auto; did=c6233ed39e42946cbb5515f781b2cef3' \
+  -H 'DNT: 1' \
+  -H 'Origin: https://rfv-leonberg.reitbuch.com' \
+  -H 'Referer: https://rfv-leonberg.reitbuch.com/event.php?e=26519' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Linux"' \
+  --data-raw 'command=ax.checkin.showcheckin&boxid=chkinbox&params=%7B%22loginuid%22%3A%223832%22%2C%22step%22%3A%22EVBK%22%2C%22next%22%3A%22BOOK_W%22%2C%22eventid%22%3A%2226519%22%2C%22courseid%22%3A%220%22%2C%22selaltclass%22%3A%22%22%2C%22selanicls%22%3A%22S%22%2C%22selcard%22%3A%22%22%2C%22selanimal%22%3A%22S%3A0%22%2C%22selanimal2%22%3A%22%22%2C%22selanimal3%22%3A%22%22%2C%22selanimal4%22%3A%22%22%2C%22selanimal5%22%3A%22%22%2C%22selpayopt%22%3A%22BILL%22%2C%22rastertime%22%3A%22%22%2C%22rastertimes%22%3A%22%22%2C%22note%22%3A%22%22%2C%22selpops%22%3A%22%22%2C%22newevid%22%3A%22%22%2C%22wpid%22%3A%22%22%2C%22newdate%22%3A%22%22%2C%22classid%22%3A%22%22%2C%22ezid%22%3A%22%22%2C%22evbegin%22%3A%22%22%2C%22title%22%3A%22%22%2C%22locid%22%3A%22%22%2C%22mode%22%3A%22%22%7D&longtxt=undefined'
+
+  # check?? 
+  curl 'https://rfv-leonberg.reitbuch.com/ajax.php' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-type: application/x-www-form-urlencoded' \
+  -b 'PHPSESSID=bbtudueututi1t57gpcucc4h8o; view=auto; did=c6233ed39e42946cbb5515f781b2cef3' \
+  -H 'DNT: 1' \
+  -H 'Origin: https://rfv-leonberg.reitbuch.com' \
+  -H 'Referer: https://rfv-leonberg.reitbuch.com/event.php?e=26519' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Linux"' \
+  --data-raw 'command=ax.event.showeventdetails&boxid=evt_detail&params=%7B%22loginuid%22%3A%223832%22%2C%22eventid%22%3A%2226519%22%2C%22checkin%22%3A0%7D&longtxt=undefined'
+
+  # storno 
+
+  curl 'https://rfv-leonberg.reitbuch.com/ajax.php' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-type: application/x-www-form-urlencoded' \
+  -b 'PHPSESSID=bbtudueututi1t57gpcucc4h8o; view=auto; did=c6233ed39e42946cbb5515f781b2cef3' \
+  -H 'DNT: 1' \
+  -H 'Origin: https://rfv-leonberg.reitbuch.com' \
+  -H 'Referer: https://rfv-leonberg.reitbuch.com/event.php?e=26519' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Linux"' \
+  --data-raw 'command=ax.checkin.showcheckin&boxid=chkinbox&params=%7B%22loginuid%22%3A%223832%22%2C%22step%22%3A%22EVBK%22%2C%22next%22%3A%22STORN_WT%22%2C%22eventid%22%3A%2226519%22%2C%22courseid%22%3A%220%22%2C%22selaltclass%22%3A%22%22%2C%22selanicls%22%3A%22%22%2C%22selcard%22%3A%22%22%2C%22selanimal%22%3A%22%22%2C%22selanimal2%22%3A%22%22%2C%22selanimal3%22%3A%22%22%2C%22selanimal4%22%3A%22%22%2C%22selanimal5%22%3A%22%22%2C%22selpayopt%22%3A%22%22%2C%22rastertime%22%3A%22%22%2C%22rastertimes%22%3A%22%22%2C%22note%22%3A%22%22%2C%22selpops%22%3A%22%22%2C%22newevid%22%3A%22%22%2C%22wpid%22%3A%22%22%2C%22newdate%22%3A%22%22%2C%22classid%22%3A%22%22%2C%22ezid%22%3A%22%22%2C%22evbegin%22%3A%22%22%2C%22title%22%3A%22%22%2C%22locid%22%3A%22%22%2C%22mode%22%3A%22%22%7D&longtxt=undefined'
+
+
+#update
+
+  curl 'https://rfv-leonberg.reitbuch.com/ajax.php' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-type: application/x-www-form-urlencoded' \
+  -b 'PHPSESSID=bbtudueututi1t57gpcucc4h8o; view=auto; did=c6233ed39e42946cbb5515f781b2cef3' \
+  -H 'DNT: 1' \
+  -H 'Origin: https://rfv-leonberg.reitbuch.com' \
+  -H 'Referer: https://rfv-leonberg.reitbuch.com/event.php?e=26519' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Linux"' \
+  --data-raw 'command=ax.event.showeventdetails&boxid=evt_detail&params=%7B%22loginuid%22%3A%223832%22%2C%22eventid%22%3A%2226519%22%2C%22checkin%22%3A0%7D&longtxt=undefined'

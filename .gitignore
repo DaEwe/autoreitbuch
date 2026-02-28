@@ -8,3 +8,12 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Pulumi
+infra/.pulumi/
+infra/venv/
+
+# Secrets & runtime artifacts
+.env
+*.log
+debug_*.html

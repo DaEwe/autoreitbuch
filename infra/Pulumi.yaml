@@ -1,0 +1,3 @@
+name: autoreitbuch
+runtime: python
+description: Autoreitbuch Telegram bot infrastructure on GCP (e2-micro free tier)

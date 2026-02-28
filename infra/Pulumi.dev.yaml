@@ -1,0 +1,10 @@
+encryptionsalt: v1:ZF+8IJYrxYA=:v1:ZJi/nRIYsyKIrgek:GFUAgWuM6s+C4SEKBHJ6d6WFR2Jpyg==
+config:
+  autoreitbuch:telegram_token:
+    secure: v1:KS269rWZeTfumS34:bGPBbD5mciI2itWYSoMSpSEr6fNRuEolkdglX1IMwwsH913DS26UB/xg4MwU61NbYcWgAG8pMSCQFbsUWVA=
+  autoreitbuch:telegram_chat_id:
+    secure: v1:tyhkfjoyor2TINgl:5xfRFggqtCJZELhXxsKA1PCusf2ch0aHNzI=
+  autoreitbuch:reitbuch_user:
+    secure: v1:NWKDHDeoe9AkzyBe:C14vrDDUZuXOOQDk387gBm3zPp1oProRt+4=
+  autoreitbuch:reitbuch_password:
+    secure: v1:EjcyWw1v+FUpH8p8:QX/n5oDpAYmWggjJyXDv8WMSQoXRN9IYnQQEaPPF

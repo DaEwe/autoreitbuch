@@ -159,3 +159,104 @@ def parse_participants(html_content):
         "waiting_list": waiting_list
     }
 
+
+def parse_my_events(html_content):
+    """
+    Parses myaccount.events.php to find all upcoming bookings.
+    Returns a list of dicts: {date_str, datetime, title, teacher, status}
+    status: 'gebucht' | 'warteliste'
+    Only returns events in the future.
+    """
+    import re
+    from datetime import datetime
+
+    soup = BeautifulSoup(html_content, 'html.parser')
+    events = []
+
+    body = soup.find('div', id='divmyevents')
+    if not body:
+        return events
+
+    rows = body.find_all('div', class_='row')
+    for row in rows[1:]:  # skip header row
+        cols = row.find_all('div', recursive=False)
+        if len(cols) < 6:
+            continue
+
+        # --- Datum ---
+        date_text = cols[0].get_text(separator=' ', strip=True)
+        m = re.search(r'(\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})', date_text)
+        if not m:
+            continue
+        date_str = m.group(1)
+        try:
+            dt = datetime.strptime(date_str, '%d.%m.%Y %H:%M')
+        except ValueError:
+            continue
+        if dt < datetime.now():
+            continue  # vergangene Termine überspringen
+
+        # --- Titel & Lehrer ---
+        title = cols[1].get_text(strip=True)
+        teacher = cols[2].get_text(strip=True)
+
+        # --- Status: Warteliste oder gebucht ---
+        hint_text = cols[4].get_text(strip=True)
+        aktion_html = str(cols[5])
+        if 'Auf Warteliste' in hint_text:
+            status = 'warteliste'
+        elif 'StornoEvent' in aktion_html:
+            status = 'gebucht'
+        else:
+            status = 'unbekannt'
+
+        events.append({
+            'date_str': date_str,
+            'datetime': dt,
+            'title': title,
+            'teacher': teacher,
+            'status': status,
+        })
+
+    events.sort(key=lambda e: e['datetime'])
+    return events
+
+    """
+    Parses myaccount.php to find bookings.
+    Returns a list of strings describing the bookings.
+    """
+    soup = BeautifulSoup(html_content, 'html.parser')
+    bookings = []
+    
+    # Look for the table with "Buchungsdatum" header
+    tables = soup.find_all('table')
+    for table in tables:
+        headers = [th.get_text(strip=True).lower() for th in table.find_all('th')]
+        if not headers or "buchungsdatum" not in headers[0]:
+            continue
+            
+        # Found the table
+        rows = table.find_all('tr')
+        for tr in rows:
+            cols = [td.get_text(strip=True) for td in tr.find_all('td')]
+            if not cols: continue
+            
+            # Format: Date, Action, Termin, ...
+            # Row 4: ['28.01.26 23:30', 'Warteliste (-- ?? --)', 'Sa, 14.02.26 09:00', '(RECHW)', '']
+            if len(cols) >= 3:
+                date_booked = cols[0]
+                action = cols[1]
+                termin = cols[2]
+                
+                # Filter out old stuff? 
+                # Maybe keep everything for now or filter by "Termin" date?
+                # "Sa, 14.02.26 09:00" -> Parse date?
+                
+                # Simple filter: Show only Warteliste or Reitstunde (ignore Rechnungsstellung if desired)
+                # But user wants "current bookings".
+                
+                if "Warteliste" in action or "Reitstunde" in action or "Teilnahme" in action:
+                    bookings.append(f"{termin}: {action} (gebucht am {date_booked})")
+                    
+    return bookings
+

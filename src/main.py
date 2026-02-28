@@ -180,14 +180,17 @@ def main():
                                         "loginuid": loginuid, "step": "EVBK", "next": next_param, "eventid": eid, "courseid": "0",
                                         "selanicls": "S", "selanimal": "S:0", "note": "", "selpayopt": "BILL"
                                       }
-                                      response_evbk = client.ajax_request("ax.checkin.showcheckin", booking_params)
-                                      if "erfolgreich" in response_evbk or "gebucht" in response_evbk or "Sie sind Teilnehmer" in response_evbk:
+                                      client.ajax_request("ax.checkin.showcheckin", booking_params)
+                                      # Verify via erneuten PRE-Call — STORN = Buchung erfolgreich
+                                      verify = client.ajax_request("ax.checkin.showcheckin", params)
+                                      verify_actions = re.findall(r"ShowCheckin\s*\(\s*['\"]EVBK['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)", verify)
+                                      if any("STORN" in a for a in verify_actions) or "Warteliste" in verify or "Teilnehmer" in verify:
                                           status_msg = f"{action_desc} SUCCESSFUL"
                                           target_found = True
                                           send_telegram_alert(f"🐴 Reitbuch: {action_desc} successful for {date_str}!\nLesson ID: {eid}")
                                       else:
                                           status_msg = f"{action_desc} FAILED (See log)"
-                                          logger.warning(f"Booking response debug: {response_evbk[:200]}...")
+                                          logger.warning(f"Booking verify response: {verify[:200]}...")
                                           target_found = True
                                           send_telegram_alert(f"⚠️ Reitbuch: {action_desc} FAILED for {date_str}.\nCheck logs.")
                                   else:

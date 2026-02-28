@@ -3,9 +3,12 @@ import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from client import ReitbuchClient
-from parser import parse_available_lessons
+from parser import parse_available_lessons, parse_my_events
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, time
+import pytz
+import time as time_module
+import sys
 
 # Logging
 logging.basicConfig(
@@ -74,13 +77,15 @@ def check_lessons(do_booking=False):
                     elif "BOOK_T" in all_actions:
                         status_msg = "AVAILABLE (Booking)"
                         if do_booking:
-                            # Booking Logic
                             b_params = {
                                 "loginuid": loginuid, "step": "EVBK", "next": "BOOK_T", "eventid": eid, "courseid": "0",
                                 "selanicls": "S", "selanimal": "S:0", "note": "", "selpayopt": "BILL"
                             }
-                            resp = client.ajax_request("ax.checkin.showcheckin", b_params)
-                            if "erfolgreich" in resp or "gebucht" in resp:
+                            client.ajax_request("ax.checkin.showcheckin", b_params)
+                            # Verify via erneuten PRE-Call — STORN = Buchung erfolgreich
+                            verify = client.ajax_request("ax.checkin.showcheckin", params)
+                            verify_actions = re.findall(r"ShowCheckin\s*\(\s*['\"]EVBK['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)", verify)
+                            if any("STORN" in a for a in verify_actions) or "Sie sind Teilnehmer" in verify or "gebucht" in verify:
                                 status_msg = "Booking SUCCESSFUL! 🎉"
                             else:
                                 status_msg = "Booking FAILED ❌"
@@ -91,8 +96,11 @@ def check_lessons(do_booking=False):
                                 "loginuid": loginuid, "step": "EVBK", "next": "BOOK_W", "eventid": eid, "courseid": "0",
                                 "selanicls": "S", "selanimal": "S:0", "note": "", "selpayopt": "BILL"
                             }
-                            resp = client.ajax_request("ax.checkin.showcheckin", b_params)
-                            if "erfolgreich" in resp:
+                            client.ajax_request("ax.checkin.showcheckin", b_params)
+                            # Verify via erneuten PRE-Call — STORN = auf Warteliste
+                            verify = client.ajax_request("ax.checkin.showcheckin", params)
+                            verify_actions = re.findall(r"ShowCheckin\s*\(\s*['\"]EVBK['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)", verify)
+                            if any("STORN" in a for a in verify_actions) or "Warteliste" in verify or "erfolgreich" in verify:
                                 status_msg = "Waitlisting SUCCESSFUL! 📝"
                             else:
                                 status_msg = "Waitlisting FAILED ❌"
@@ -104,15 +112,82 @@ def check_lessons(do_booking=False):
             
     return results
 
+def check_account_status():
+    client = ReitbuchClient()
+    if not client.login(USER, PWD):
+        return ["⚠️ Login fehlgeschlagen"]
+
+    try:
+        resp = client.client.get("/myaccount.events.php")
+        events = parse_my_events(resp.text)
+        if not events:
+            return ["(Keine zukünftigen Termine gefunden)"]
+
+        STATUS_ICON = {'gebucht': '✅', 'warteliste': '🕐', 'unbekannt': '❓'}
+        lines = []
+        for e in events:
+            icon = STATUS_ICON.get(e['status'], '❓')
+            status_label = {'gebucht': 'Gebucht', 'warteliste': 'Warteliste', 'unbekannt': '?'}.get(e['status'], '?')
+            lines.append(f"{icon} {e['date_str']} — {e['title']} ({e['teacher']}) [{status_label}]")
+        return lines
+    except Exception as ex:
+        return [f"Fehler: {ex}"]
+
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("⏳ Checking Reitbuch... moment!")
-    lines = check_lessons(do_booking=False)
-    msg = "🐴 Reitbuch Status:\n" + "\n".join(lines)
+    await update.message.reply_text("⏳ Lade Buchungen...")
+
+    lines = check_account_status()
+    msg = "🐴 Meine Buchungen:\n\n" + "\n".join(lines)
     await update.message.reply_text(msg)
 
+
 async def daily_job(context: ContextTypes.DEFAULT_TYPE):
-    lines = check_lessons(do_booking=True)
-    msg = "🐴 Daily Booking Report:\n" + "\n".join(lines)
+    # Sniper Mode: Run for 6 minutes (start 23:59 -> end 00:05)
+    start_ts = time_module.time()
+    duration = 6 * 60 
+    
+    status_message = None
+    if CHAT_ID:
+        status_message = await context.bot.send_message(chat_id=CHAT_ID, text="🚁 Sniper-Modus gestartet! (Scanne alle 5s...)")
+
+    last_lines = []
+    attempt = 0
+    
+    while time_module.time() - start_ts < duration:
+        attempt += 1
+        lines = check_lessons(do_booking=True)
+        last_lines = lines
+        
+        # Check for success
+        if any("SUCCESSFUL" in line for line in lines):
+            msg = "🐴 🎯 VOLLETREFFER! (Sniper Success):\n\n"
+            msg += "📅 **Kommende Termine (Wochenplan):**\n" + "\n".join(lines)
+            if CHAT_ID:
+                await context.bot.send_message(chat_id=CHAT_ID, text=msg)
+            return # Stop spamming
+            
+        # Update Status Message (every 20s or every change? To avoid rate limit)
+        # Let's update every 4th attempt (20s)
+        if status_message and attempt % 4 == 0:
+            try:
+                current_status = "\n".join(lines)
+                await context.bot.edit_message_text(
+                    chat_id=CHAT_ID, 
+                    message_id=status_message.message_id, 
+                    text=f"🚁 Sniper läuft... (Versuch {attempt})\n\n{current_status}"
+                )
+            except Exception as e:
+                pass # Ignore "message not modified" errors
+
+        # Wait 5s
+        time_module.sleep(5)
+        
+    # Final report if nothing worked
+    lines_account = check_account_status()
+    msg = "🐴 Sniper beendet (Kein Erfolg):\n\n"
+    msg += "📅 **Letzter Status:**\n" + "\n".join(last_lines) + "\n\n"
+    msg += "📒 **Buchungshistorie (Konto):**\n" + "\n".join(lines_account)
+    
     if CHAT_ID:
         await context.bot.send_message(chat_id=CHAT_ID, text=msg)
 
@@ -125,9 +200,10 @@ def main():
     
     app.add_handler(CommandHandler("status", status))
     
-    # Schedule Job at 00:01
-    # Note: timezone might be UTC if not specified
-    app.job_queue.run_daily(daily_job, time=datetime.strptime("00:01", "%H:%M").time(), days=(0,1,2,3,4,5,6))
+    # Schedule Job at 23:59 Europe/Berlin
+    berlin_tz = pytz.timezone('Europe/Berlin')
+    target_time = time(23, 59, tzinfo=berlin_tz)
+    app.job_queue.run_daily(daily_job, time=target_time, days=(0,))  # 0 = Sonntag
     
     # Also run once on start? No.
     
